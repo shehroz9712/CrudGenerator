@@ -1,0 +1,30 @@
+{
+    "name": "shehroz/crud-generator",
+    "description": "Laravel CRUD Generator with roles, permissions & policies by Shehroz",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+      {
+        "name": "Muhammad Shehroz",
+        "email": "your@email.com",
+        "homepage": "https://www.linkedin.com/in/muhammadshehroz97/"
+      }
+    ],
+    "require": {
+      "php": "^8.1",
+      "illuminate/support": "^10.0|^11.0"
+    },
+    "autoload": {
+      "psr-4": {
+        "Shehroz\\CrudGenerator\\": "src/"
+      }
+    },
+    "extra": {
+      "laravel": {
+        "providers": [
+          "Shehroz\\CrudGenerator\\CrudGeneratorServiceProvider"
+        ]
+      }
+    }
+  }
+  

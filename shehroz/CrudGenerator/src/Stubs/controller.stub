@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Models\{{ name }};
+use App\Http\Requests\{{ name }}Request;
+use App\Repositories\Interfaces\{{ name }}RepositoryInterface;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class {{ name }}Controller extends Controller
+{
+    public function __construct(
+        protected {{ name }}RepositoryInterface ${{ varName }}Repository
+    ) {}
+
+    public function index(): View
+    {
+        $this->authorize('viewAny', {{ name }}::class);
+        $data = $this->{{ varName }}Repository->getAll(request()->all());
+
+        return view('admin.{{ pluralVarName }}.index', compact('data'));
+    }
+
+    public function create(): View
+    {
+        $this->authorize('create', {{ name }}::class);
+        return view('admin.{{ pluralVarName }}.create');
+    }
+
+    public function store({{ name }}Request $request): RedirectResponse
+    {
+        $this->authorize('create', {{ name }}::class);
+        $this->{{ varName }}Repository->create($request->validated());
+
+        return to_route('{{ pluralVarName }}.index')->with('success', '{{ name }} created successfully.');
+    }
+
+    public function show({{ name }} ${{ varName }}): View
+    {
+        $this->authorize('view', ${{ varName }});
+        return view('admin.{{ pluralVarName }}.show', compact('{{ varName }}'));
+    }
+
+    public function edit({{ name }} ${{ varName }}): View
+    {
+        $this->authorize('update', ${{ varName }});
+        return view('admin.{{ pluralVarName }}.edit', compact('{{ varName }}'));
+    }
+
+    public function update({{ name }}Request $request, {{ name }} ${{ varName }}): RedirectResponse
+    {
+        $this->authorize('update', ${{ varName }});
+        $this->{{ varName }}Repository->update(${{ varName }}->id, $request->validated());
+
+        return to_route('{{ pluralVarName }}.index')->with('success', '{{ name }} updated successfully.');
+    }
+
+    public function destroy({{ name }} ${{ varName }}): RedirectResponse
+    {
+        $this->authorize('delete', ${{ varName }});
+        $this->{{ varName }}Repository->delete(${{ varName }}->id);
+
+        return to_route('{{ pluralVarName }}.index')->with('success', '{{ name }} deleted successfully.');
+    }
+}

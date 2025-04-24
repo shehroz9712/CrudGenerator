@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Repositories;
+
+use App\Models\{{ name }};
+use App\Repositories\Interfaces\{{ name }}RepositoryInterface;
+
+class {{ name }}Repository implements {{ name }}RepositoryInterface
+{
+    public function getAll(array $params): mixed
+    {
+        return {{ name }}::filterAndFetch($params);
+    }
+
+    public function getActiveAll(array $params): mixed
+    {
+        return {{ name }}::filterAndFetch($params)->active();
+    }
+
+    public function findById(int $id): mixed
+    {
+        return {{ name }}::findOrFail($id);
+    }
+
+    public function create(array $data): mixed
+    {
+        return {{ name }}::create($data);
+    }
+
+    public function update(int $id, array $data): mixed
+    {
+        $record = {{ name }}::findOrFail($id);
+        $record->update($data);
+        return $record;
+    }
+
+    public function delete(int $id): bool
+    {
+        return {{ name }}::findOrFail($id)->delete();
+    }
+}

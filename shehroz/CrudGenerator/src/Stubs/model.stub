@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class {{ name }} extends Model
+{
+    use HasFactory;
+    @if($softDeletes)
+    use SoftDeletes;
+    @endif
+
+    protected $fillable = [
+        'name',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
+    protected $attributes = [
+        'status' => true,
+    ];
+
+    // Example scope to filter and fetch with optional logic
+    public function scopeFilterAndFetch($query, array $params)
+    {
+        return $query
+            ->when($params['search'] ?? null, fn($q, $search) => 
+                $q->where('name', 'like', "%$search%")
+            )
+            ->orderByDesc('id');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', true);
+    }
+}
