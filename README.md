@@ -13,11 +13,12 @@ A powerful Laravel package to generate complete CRUD operations with roles, perm
 ## Installation
 Install the package via Composer:
 
-```bash
+bash
 composer require shehroz/crud-generator
 Publish the stubs (optional):
 
-```bash
+
+bash
 php artisan vendor:publish --tag=crud-generator-stubs
 Usage
 Run the make:crud command to generate CRUD components:
