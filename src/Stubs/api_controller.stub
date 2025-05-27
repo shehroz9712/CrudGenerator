@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Controllers\Api\{{ namespace }};
+
+use App\Models\{{ baseName }};
+use App\Http\Requests\{{ namespace }}{{ baseName }}Request;
+use App\Repositories\Interfaces\{{ namespace }}{{ baseName }}RepositoryInterface;
+use Illuminate\Http\JsonResponse;
+
+class {{ baseName }}Controller extends Controller
+{
+    public function __construct(
+        protected {{ namespace }}{{ baseName }}RepositoryInterface ${{ camelName }}Repository
+    ) {}
+
+    public function index(): JsonResponse
+    {
+        $this->authorize('viewAny', {{ baseName }}::class);
+        $data = $this->{{ camelName }}Repository->getAll(request()->all());
+        return response()->json($data);
+    }
+
+    public function store({{ baseName }}Request $request): JsonResponse
+    {
+        $this->authorize('create', {{ baseName }}::class);
+        $item = $this->{{ camelName }}Repository->create($request->validated());
+        return response()->json($item, 201);
+    }
+
+    public function show({{ baseName }} ${{ camelName }}): JsonResponse
+    {
+        $this->authorize('view', ${{ camelName }});
+        return response()->json(${{ camelName }});
+    }
+
+    public function update({{ baseName }}Request $request, {{ baseName }} ${{ camelName }}): JsonResponse
+    {
+        $this->authorize('update', ${{ camelName }});
+        $item = $this->{{ camelName }}Repository->update(${{ camelName }}->id, $request->validated());
+        return response()->json($item);
+    }
+
+    public function destroy({{ baseName }} ${{ camelName }}): JsonResponse
+    {
+        $this->authorize('delete', ${{ camelName }});
+        $this->{{ camelName }}Repository->delete(${{ camelName }}->id);
+        return response()->json(null, 204);
+    }
+}
