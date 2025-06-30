@@ -25,5 +25,7 @@
         "Shehroz\\CrudGenerator\\CrudGeneratorServiceProvider"
       ]
     }
-  }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }
