@@ -9,7 +9,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->mergeConfigFrom(__DIR__.'/config/config.php', 'crud-generator');
+        $this->mergeConfigFrom(__DIR__ . '/config/config.php', 'crud-generator');
     }
 
     public function boot()
@@ -20,7 +20,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
             ]);
 
             $this->publishes([
-                __DIR__.'/Stubs' => resource_path('views/commands/crud'),
+                __DIR__ . '/Stubs' => resource_path('views/commands/crud'),
             ], 'crud-generator-stubs');
         }
     }
