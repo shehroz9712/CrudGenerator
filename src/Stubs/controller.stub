@@ -18,46 +18,39 @@ class {{ baseName }}Controller extends Controller
 
     public function index(): View
     {
-        $this->authorize('viewAny', {{ baseName }}::class);
         $data = $this->{{ camelName }}Repository->getAll(request()->all());
         return view('{{ namespacePath }}{{ pluralSnake }}.index', compact('data'));
     }
 
     public function create(): View
     {
-        $this->authorize('create', {{ baseName }}::class);
         return view('{{ namespacePath }}{{ pluralSnake }}.create');
     }
 
     public function store({{ baseName }}Request $request): RedirectResponse
     {
-        $this->authorize('create', {{ baseName }}::class);
         $this->{{ camelName }}Repository->create($request->validated());
         return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} created successfully.');
     }
 
     public function show({{ baseName }} ${{ camelName }}): View
     {
-        $this->authorize('view', ${{ camelName }});
         return view('{{ namespacePath }}{{ pluralSnake }}.show', compact('{{ camelName }}'));
     }
 
     public function edit({{ baseName }} ${{ camelName }}): View
     {
-        $this->authorize('update', ${{ camelName }});
         return view('{{ namespacePath }}{{ pluralSnake }}.edit', compact('{{ camelName }}'));
     }
 
     public function update({{ baseName }}Request $request, {{ baseName }} ${{ camelName }}): RedirectResponse
     {
-        $this->authorize('update', ${{ camelName }});
         $this->{{ camelName }}Repository->update(${{ camelName }}->id, $request->validated());
         return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} updated successfully.');
     }
 
     public function destroy({{ baseName }} ${{ camelName }}): RedirectResponse
     {
-        $this->authorize('delete', ${{ camelName }});
         $this->{{ camelName }}Repository->delete(${{ camelName }}->id);
         return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} deleted successfully.');
     }
