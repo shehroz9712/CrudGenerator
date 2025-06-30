@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class MakeCrud extends Command
 {
-    protected $signature = 'make:crud {name} {--api} {--both}';
+    protected $signature = 'make:crud {name}';
     protected $description = 'Generate a complete CRUD with roles, permissions & policies for web and/or API';
 
     public function handle()
@@ -26,12 +26,20 @@ class MakeCrud extends Command
         $pluralCamel = Str::plural($camelName);
         $routeName = Str::kebab($pluralCamel);
         $kebabName = Str::kebab($baseName);
+        $tableName = Str::plural($singularSnake);
         $stubPath = __DIR__ . '/../../stubs';
 
-        $replacements = compact('baseName', 'camelName', 'pluralCamel', 'routeName', 'pluralSnake', 'kebabName', 'namespace', 'namespacePath');
+        $replacements = compact('baseName', 'camelName', 'pluralCamel', 'routeName', 'pluralSnake', 'kebabName', 'namespace', 'namespacePath', 'tableName');
 
-        $generateWeb = !$this->option('api') || $this->option('both');
-        $generateApi = $this->option('api') || $this->option('both');
+        // Prompt user for generation type
+        $generationType = $this->choice(
+            'What do you want to generate?',
+            ['web', 'api', 'both'],
+            'both'
+        );
+
+        $generateWeb = in_array($generationType, ['web', 'both']);
+        $generateApi = in_array($generationType, ['api', 'both']);
 
         // File mappings
         $files = [];
@@ -65,24 +73,26 @@ class MakeCrud extends Command
                 File::ensureDirectoryExists(dirname($path));
                 File::put($path, $content);
                 $this->info("$stub created at $path.");
+            } else {
+                $this->error("Stub file for $stub not found at $stubFile.");
             }
         }
 
         // Generate routes
-        $routeFile = base_path('routes/web.php');
         if ($generateWeb) {
+            $routeFile = base_path('routes/web.php');
             $routeContent = <<<EOT
 
-                Route::middleware(['web', 'auth'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
-                    Route::get('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
-                    Route::get('/create', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'create'])->name('create');
-                    Route::post('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
-                    Route::get('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
-                    Route::get('/{id}/edit', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'edit'])->name('edit');
-                    Route::put('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
-                    Route::delete('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
-                });
-                EOT;
+Route::middleware(['web', 'auth'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
+    Route::get('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
+    Route::get('/create', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'create'])->name('create');
+    Route::post('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
+    Route::get('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'edit'])->name('edit');
+    Route::put('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
+    Route::delete('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
+});
+EOT;
             File::append($routeFile, $routeContent);
             $this->info("Web routes appended to routes/web.php");
         }
@@ -91,14 +101,14 @@ class MakeCrud extends Command
             $apiRouteFile = base_path('routes/api.php');
             $apiRouteContent = <<<EOT
 
-            Route::middleware(['api'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
-                Route::get('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
-                Route::post('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
-                Route::get('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
-                Route::put('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
-                Route::delete('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
-            });
-            EOT;
+Route::middleware(['api'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
+    Route::get('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
+    Route::post('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
+    Route::get('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
+    Route::put('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
+    Route::delete('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
+});
+EOT;
             File::append($apiRouteFile, $apiRouteContent);
             $this->info("API routes appended to routes/api.php");
         }

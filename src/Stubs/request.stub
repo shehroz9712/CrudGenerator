@@ -2,20 +2,153 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\ApiFormRequest;
+use App\Models\{{baseName}};
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
-class {{ name }}Request extends FormRequest
+class {{baseName}}Request extends ApiFormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = Auth::user();
+        $modelId = $this->route('{{kebabName}}') ?? $this->route('id');
+        $modelInstance = $modelId ? {{baseName}}::find($modelId) : null;
+
+        if (
+            !$modelInstance &&
+            ($this->isMethod('DELETE') || $this->isMethod('PUT') || $this->isMethod('PATCH'))
+        ) {
+            return true;
+        }
+
+        return match (true) {
+            $this->isMethod('POST') => $user->can('create', {{baseName}}::class),
+            $this->isMethod('PUT'), $this->isMethod('PATCH') => $user->can('update', $modelInstance),
+            $this->isMethod('DELETE') => $user->can('delete', $modelInstance),
+            $this->isSingleView() => $user->can('view', $modelInstance),
+            $this->isMethod('GET') => $user->can('viewAny', {{baseName}}::class),
+            default => false,
+        };
     }
 
     public function rules(): array
     {
+        return match ($this->method()) {
+            'POST' => $this->storeRules(),
+            'PUT', 'PATCH' => $this->updateRules(),
+            'DELETE' => $this->deleteRules(),
+            'GET' => $this->isSingleView() ? $this->showRules() : $this->filterRules(),
+            default => [],
+        };
+    }
+
+    protected function isSingleView(): bool
+    {
+        return $this->route('{{kebabName}}') instanceof {{baseName}};
+    }
+
+    protected function showRules(): array
+    {
         return [
-            'name'   => ['required', 'string', 'max:255'],
-            'status' => ['required', 'boolean'],
+            'id' => 'required|integer|exists:{{tableName}},id',
+        ];
+    }
+
+    protected function storeRules(): array
+    {
+        return [
+            // 'field_name' => 'required|string|max:255',
+        ];
+    }
+
+    protected function updateRules(): array
+    {
+        return [
+            'id' => 'required|integer|exists:{{tableName}},id',
+            // 'field_name' => 'required|string|max:255',
+        ];
+    }
+
+    protected function deleteRules(): array
+    {
+        return [
+            'id' => 'required|integer|exists:{{tableName}},id',
+        ];
+    }
+
+    protected function filterRules(): array
+    {
+        return [
+            'search'    => 'sometimes|array',
+            'search.*'  => 'sometimes|string|nullable',
+            'where'     => 'sometimes|array',
+            'where.*'   => 'sometimes|string|nullable',
+            'order_by'  => 'sometimes|string|in:' . implode(',', self::allowedColumns()),
+            'direction' => 'sometimes|in:asc,desc',
+            'limit'     => 'sometimes|integer|min:1|max:100',
+            'paginate'  => 'sometimes|boolean',
+        ];
+    }
+
+    protected function prepareForValidation()
+    {
+        $id = $this->route('id');
+        if ($id !== null && !is_numeric($id)) {
+            throw ValidationException::withMessages([
+                'id' => ['The ID must be integer.'],
+            ])->status(400);
+        }
+
+        $this->merge([
+            'id' => (int) $id,
+        ]);
+    }
+
+    public static function allowedColumns(): array
+    {
+        return {{baseName}}::allowedColumns();
+    }
+
+    public function withValidator($validator)
+    {
+        if ($this->isMethod('GET')) {
+            $validator->after(function ($validator) {
+                $allowed = self::allowedColumns();
+
+                $searchKeys = array_keys($this->input('search', []));
+                foreach (array_diff($searchKeys, $allowed) as $key) {
+                    $validator->errors()->add("search.$key", "The search key '$key' is not allowed.");
+                }
+
+                $whereKeys = array_keys($this->input('where', []));
+                foreach (array_diff($whereKeys, $allowed) as $key) {
+                    $validator->errors()->add("where.$key", "The where key '$key' is not allowed.");
+                }
+            });
+        }
+    }
+
+    public function validatedParams(): array
+    {
+        $validated = $this->validated();
+        $allowed = self::allowedColumns();
+
+        $search = collect($validated['search'] ?? [])
+            ->only($allowed)
+            ->toArray();
+
+        $where = collect($validated['where'] ?? [])
+            ->only($allowed)
+            ->toArray();
+
+        return [
+            'search'    => $search,
+            'where'     => $where, 
+            'order_by'  => $validated['order_by'] ?? 'created_at',
+            'direction' => $validated['direction'] ?? 'desc',
+            'limit'     => $validated['limit'] ?? 15,
+            'paginate'  => $validated['paginate'] ?? true,
         ];
     }
 }
