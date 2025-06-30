@@ -25,3 +25,5 @@ class CrudGeneratorServiceProvider extends ServiceProvider
         }
     }
 }
+
+
