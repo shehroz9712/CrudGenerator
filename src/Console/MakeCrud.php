@@ -1,6 +1,6 @@
 <?php
 
-namespace Shehroz\CrudGenerator\Commands;
+namespace Shehroz\CrudGenerator\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;

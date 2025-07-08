@@ -3,7 +3,7 @@
 namespace Shehroz\CrudGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use Shehroz\CrudGenerator\Console\MakeCrud;
+use Shehroz\CrudGenerator\Console\MakeCrud
 
 class CrudGeneratorServiceProvider extends ServiceProvider
 {
