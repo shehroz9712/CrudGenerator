@@ -22,7 +22,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
 
             // Publish stub files to the user's project
             $this->publishes([
-                __DIR__ . '/../stubs' => base_path('stubs/crud-generator'),
+                __DIR__ . '/Stubs' => base_path('stubs/crud-generator'),
             ], 'crud-generator-stubs');
         }
     }
