@@ -27,7 +27,8 @@ class MakeCrud extends Command
         $routeName = Str::kebab($pluralCamel);
         $kebabName = Str::kebab($baseName);
         $tableName = Str::plural($singularSnake);
-        $stubPath = __DIR__ . '/../../stubs';
+        $stubPath = __DIR__ . '/../Stubs';
+
 
         $replacements = compact('baseName', 'camelName', 'pluralCamel', 'routeName', 'pluralSnake', 'kebabName', 'namespace', 'namespacePath', 'tableName');
 
