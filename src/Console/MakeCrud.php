@@ -74,13 +74,16 @@ class MakeCrud extends Command
             'migration' => database_path("migrations/" . date('Y_m_d_His') . "_create_{$pluralSnake}_table.php"),
             'seeder' => database_path("seeders/{$baseName}Seeder.php"),
         ]);
+        $stubPath = __DIR__ . '/../stubs'; // ✅ Fix path to stubs
 
         foreach ($files as $stub => $path) {
             $stubFile = "$stubPath/$stub.stub";
             if (File::exists($stubFile)) {
                 $content = File::get($stubFile);
                 foreach ($replacements as $key => $value) {
-                    $content = str_replace("{{{$key}}}", $value, $content);
+                    nfo("Replacing in $stubFile");
+
+                    $content = preg_replace('/{{\s*' . preg_quote($key, '/') . '\s*}}/', $value, $content);
                 }
                 File::ensureDirectoryExists(dirname($path));
                 File::put($path, $content);
