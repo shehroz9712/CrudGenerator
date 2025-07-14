@@ -14,7 +14,6 @@ class MakeCrud extends Command
     public function handle()
     {
         $name = $this->argument('name');
-        // Handle nested paths like admin/location
         $nameParts = explode('/', $name);
         $baseName = Str::studly(array_pop($nameParts));
         $namespacePath = count($nameParts) > 0 ? implode('/', $nameParts) . '/' : '';
@@ -27,10 +26,22 @@ class MakeCrud extends Command
         $routeName = Str::kebab($pluralCamel);
         $kebabName = Str::kebab($baseName);
         $tableName = Str::plural($singularSnake);
-        $stubPath = __DIR__ . '/../Stubs';
 
-
-        $replacements = compact('baseName', 'camelName', 'pluralCamel', 'routeName', 'pluralSnake', 'kebabName', 'namespace', 'namespacePath', 'tableName');
+        // Add additional replacement keys for consistency
+        $replacements = array_merge(compact(
+            'baseName',
+            'camelName',
+            'pluralCamel',
+            'routeName',
+            'pluralSnake',
+            'kebabName',
+            'namespace',
+            'namespacePath',
+            'tableName'
+        ), [
+            'name'    => $baseName,    // for {{ name }}
+            'varName' => $camelName,   // for {{ varName }}
+        ]);
 
         // Prompt user for generation type
         $generationType = $this->choice(
