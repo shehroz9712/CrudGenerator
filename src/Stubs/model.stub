@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class {{ name }} extends Model
 {
     use HasFactory;
-    @if($softDeletes)
+    if($softDeletes)
     use SoftDeletes;
-    @endif
+    endif
 
     protected $fillable = [
         'name',
