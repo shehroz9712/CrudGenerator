@@ -81,7 +81,7 @@ class MakeCrud extends Command
             if (File::exists($stubFile)) {
                 $content = File::get($stubFile);
                 foreach ($replacements as $key => $value) {
-                    nfo("Replacing in $stubFile");
+                    info("Replacing in $stubFile");
 
                     $content = preg_replace('/{{\s*' . preg_quote($key, '/') . '\s*}}/', $value, $content);
                 }
