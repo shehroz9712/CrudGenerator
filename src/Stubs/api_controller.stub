@@ -25,12 +25,7 @@ class {{ baseName }}Controller extends BaseController
         return $this->respondSuccess($data, "{{ baseName }} Active records retrieved successfully.");
     }
 
-    public function getAllCategory({{ baseName }}FilterRequest $request)
-    {
-        $data = $this->{{ camelName }}Repository->getAllCategory($request->validatedParams());
-        return $this->respondSuccess($data, "All {{ baseName|lower }} records retrieved successfully.");
-    }
-
+ 
     public function getAll({{ baseName }}Request $request)
     {
         $data = $this->{{ camelName }}Repository->getActiveAll($request->validatedParams());
