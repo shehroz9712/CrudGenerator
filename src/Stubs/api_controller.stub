@@ -1,44 +1,63 @@
 <?php
 
-namespace App\Http\Controllers\Api\{{ namespace }};
+namespace App\Http\Controllers\Api\v1\Admin;
 
-use App\Models\{{ baseName }};
-use App\Http\Requests\{{ namespace }}{{ baseName }}Request;
+use App\Http\Controllers\Api\v1\BaseController;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Repositories\Interfaces\{{ namespace }}{{ baseName }}RepositoryInterface;
-use Illuminate\Http\JsonResponse;
+use App\Http\Requests\{{ namespace }}{{ baseName }}Request;
+use App\Http\Requests\OpenApiRequests\{{ namespace }}{{ baseName }}FilterRequest;
 
-class {{ baseName }}Controller extends Controller
+class {{ baseName }}Controller extends BaseController
 {
-    public function __construct(
-        protected {{ namespace }}{{ baseName }}RepositoryInterface ${{ camelName }}Repository
-    ) {}
+    use AuthorizesRequests;
 
-    public function index(): JsonResponse
+    protected ${{ camelName }}Repository;
+
+    public function __construct({{ namespace }}{{ baseName }}RepositoryInterface ${{ camelName }}Repository)
     {
-        $data = $this->{{ camelName }}Repository->getAll(request()->all());
-        return response()->json($data);
+        $this->{{ camelName }}Repository = ${{ camelName }}Repository;
     }
 
-    public function store({{ baseName }}Request $request): JsonResponse
+    public function index({{ baseName }}Request $request)
     {
-        $item = $this->{{ camelName }}Repository->create($request->validated());
-        return response()->json($item, 201);
+        $data = $this->{{ camelName }}Repository->getAll($request->validatedParams());
+        return $this->respondSuccess($data, "{{ baseName }} Active records retrieved successfully.");
     }
 
-    public function show({{ baseName }} ${{ camelName }}): JsonResponse
+    public function getAllCategory({{ baseName }}FilterRequest $request)
     {
-        return response()->json(${{ camelName }});
+        $data = $this->{{ camelName }}Repository->getAllCategory($request->validatedParams());
+        return $this->respondSuccess($data, "All {{ baseName|lower }} records retrieved successfully.");
     }
 
-    public function update({{ baseName }}Request $request, {{ baseName }} ${{ camelName }}): JsonResponse
+    public function getAll({{ baseName }}Request $request)
     {
-        $item = $this->{{ camelName }}Repository->update(${{ camelName }}->id, $request->validated());
-        return response()->json($item);
+        $data = $this->{{ camelName }}Repository->getActiveAll($request->validatedParams());
+        return $this->respondSuccess($data, "{{ baseName }} All records retrieved successfully.");
     }
 
-    public function destroy({{ baseName }} ${{ camelName }}): JsonResponse
+    public function store({{ baseName }}Request $request)
     {
-        $this->{{ camelName }}Repository->delete(${{ camelName }}->id);
-        return response()->json(null, 204);
+        $data = $this->{{ camelName }}Repository->create($request->validatedParams());
+        return $this->respondObjectCreated($data->toArray(), true, "{{ baseName }} created successfully.");
+    }
+
+    public function update({{ baseName }}Request $request)
+    {
+        $data = $this->{{ camelName }}Repository->update($request->id, $request->validatedParams());
+        return $this->respondSuccess($data, "{{ baseName }} updated successfully.");
+    }
+
+    public function show({{ baseName }}Request $request)
+    {
+        $data = $this->{{ camelName }}Repository->findById($request->id);
+        return $this->respondSuccess($data, "{{ baseName }} details retrieved.");
+    }
+
+    public function destroy({{ baseName }}Request $request)
+    {
+        $this->{{ camelName }}Repository->delete($request->id);
+        return $this->respondSuccess([], "{{ baseName }} deleted successfully.");
     }
 }
