@@ -4,6 +4,11 @@
 @section('css')
 @endsection
 @section('content')
+<form action="..." method="POST">
+    @csrf
+    @method('POST') <!-- edit mein PUT -->
+{{fields_loop}}  <!-- har field ka input div -->
+</form>
 @endsection
 @section('js')
 @endsection

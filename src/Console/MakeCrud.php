@@ -3,13 +3,18 @@
 namespace Shehroz\CrudGenerator\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\File; 
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\Schema; 
 class MakeCrud extends Command
 {
-    protected $signature = 'make:crud {name}';
-    protected $description = 'Generate a complete CRUD with roles, permissions & policies for web and/or API';
+    protected $signature = 'make:crud 
+        {name : Model name, e.g. Post or Admin/User} 
+        {--fields= : Fields like title:string,content:text,price:decimal:nullable,published:boolean} 
+        {--web : Generate web CRUD (views + controller)} 
+        {--api : Generate API CRUD}';
+
+    protected $description = 'Generate full CRUD with repository pattern, policies, Tailwind views and optional API';
 
     public function handle()
     {
@@ -17,117 +22,307 @@ class MakeCrud extends Command
         $nameParts = explode('/', $name);
         $baseName = Str::studly(array_pop($nameParts));
         $namespacePath = count($nameParts) > 0 ? implode('/', $nameParts) . '/' : '';
-        $namespace = count($nameParts) > 0 ? str_replace('/', '\\', Str::studly($namespacePath)) : '';
+        $namespace = count($nameParts) > 0 ? implode('\\', array_map('Str::studly', $nameParts)) . '\\' : '';
 
+        // Naming
         $singularSnake = Str::snake($baseName);
-        $pluralSnake = Str::plural($singularSnake);
-        $camelName = lcfirst($baseName);
-        $pluralCamel = Str::plural($camelName);
-        $routeName = Str::kebab($pluralCamel);
-        $kebabName = Str::kebab($baseName);
-        $tableName = Str::plural($singularSnake);
+        $pluralLower = Str::plural($singularSnake);
+        $camel = Str::camel($baseName);
+        $pluralCamel = Str::plural($camel);
+        $routePrefix = Str::kebab($namespacePath . $pluralLower);
 
-        // Add additional replacement keys for consistency
-        $replacements = array_merge(compact(
-            'baseName',
-            'camelName',
-            'pluralCamel',
-            'routeName',
-            'pluralSnake',
-            'kebabName',
-            'namespace',
-            'namespacePath',
-            'tableName'
-        ), [
-            'name'    => $baseName,    // for {{ name }}
-            'varName' => $camelName,   // for {{ varName }}
-        ]);
+        // Base replacements
+        $replacements = [
+            '{{modelNamespace}}'       => $namespace ? "App\\Models\\{$namespace}" : 'App\\Models',
+            '{{controllerNamespace}}'  => $namespace ? "App\\Http\\Controllers\\{$namespace}" : 'App\\Http\\Controllers',
+            '{{requestNamespace}}'     => $namespace ? "App\\Http\\Requests\\{$namespace}" : 'App\\Http\\Requests',
+            '{{repositoryNamespace}}'  => $namespace ? "App\\Repositories\\{$namespace}" : 'App\\Repositories',
+            '{{interfaceNamespace}}'   => $namespace ? "App\\Repositories\\Interfaces\\{$namespace}" : 'App\\Repositories\\Interfaces',
+            '{{policyNamespace}}'      => $namespace ? "App\\Policies\\{$namespace}" : 'App\\Policies',
+            '{{model}}'                => $baseName,
+            '{{table}}'                => $pluralLower,
+            '{{routePrefix}}'          => $routePrefix,
+            '{{routeName}}'            => $pluralCamel,
+            '{{var}}'                  => $camel,
+            '{{pluralVar}}'            => $pluralCamel,
+        ];
 
-        // Prompt user for generation type
-        $generationType = $this->choice(
-            'What do you want to generate?',
-            ['web', 'api', 'both'],
-            'both'
-        );
+        // Parse fields
+        $fields = $this->parseFields($this->option('fields'));
 
-        $generateWeb = in_array($generationType, ['web', 'both']);
-        $generateApi = in_array($generationType, ['api', 'both']);
+        // Decide what to generate
+        $generateWeb = $this->option('web') || (! $this->option('api') && $this->confirm('Generate web CRUD (with views)?', true));
+        $generateApi = $this->option('api') || (! $this->option('web') && $this->confirm('Generate API CRUD?', false));
 
-        // File mappings
-        $files = [];
+        if (! $generateWeb && ! $generateApi) {
+            $this->error('Nothing selected to generate.');
+            return;
+        }
+
+        $stubPath = __DIR__ . '/../stubs';
+
+        // Common files
+        $this->generateModel($stubPath, $replacements, $baseName, $namespacePath);
+        $this->generateMigration($stubPath, $replacements, $pluralLower, $fields);
+        $this->generateRequest($stubPath, $replacements, $baseName, $namespacePath, $fields);
+        $this->generateRepository($stubPath, $replacements, $baseName, $namespacePath);
+        $this->generateInterface($stubPath, $replacements, $baseName, $namespacePath);
+        $this->generatePolicy($stubPath, $replacements, $baseName, $namespacePath);
+        $this->generateSeeder($stubPath, $replacements, $baseName);
+
         if ($generateWeb) {
-            $files['controller'] = app_path("Http/Controllers/{$namespacePath}{$baseName}Controller.php");
-            $files['views/index'] = resource_path("views/{$namespacePath}{$pluralSnake}/index.blade.php");
-            $files['views/create'] = resource_path("views/{$namespacePath}{$pluralSnake}/create.blade.php");
-            $files['views/edit'] = resource_path("views/{$namespacePath}{$pluralSnake}/edit.blade.php");
-            $files['views/show'] = resource_path("views/{$namespacePath}{$pluralSnake}/show.blade.php");
+            $this->generateWebController($stubPath, $replacements, $baseName, $namespacePath);
+            $this->generateViews($stubPath, $replacements, $pluralLower, $namespacePath, $fields);
+            $this->outputWebRoutes($routePrefix, $namespace, $baseName, $pluralCamel);
         }
+
         if ($generateApi) {
-            $files['api_controller'] = app_path("Http/Controllers/Api/{$namespacePath}{$baseName}Controller.php");
+            $this->generateApiController($stubPath, $replacements, $baseName, $namespacePath);
+            $this->outputApiRoutes($routePrefix, $namespace, $baseName, $pluralCamel);
         }
-        $files = array_merge($files, [
-            'model' => app_path("Models/{$namespacePath}{$baseName}.php"),
-            'request' => app_path("Http/Requests/{$namespacePath}{$baseName}Request.php"),
-            'interface' => app_path("Repositories/Interfaces/{$namespacePath}{$baseName}RepositoryInterface.php"),
-            'repository' => app_path("Repositories/{$namespacePath}{$baseName}Repository.php"),
-            'policy' => app_path("Policies/{$namespacePath}{$baseName}Policy.php"),
-            'migration' => database_path("migrations/" . date('Y_m_d_His') . "_create_{$pluralSnake}_table.php"),
-            'seeder' => database_path("seeders/{$baseName}Seeder.php"),
-        ]);
-        $stubPath = __DIR__ . '/../stubs'; // ✅ Fix path to stubs
 
-        foreach ($files as $stub => $path) {
-            $stubFile = "$stubPath/$stub.stub";
-            if (File::exists($stubFile)) {
-                $content = File::get($stubFile);
-                foreach ($replacements as $key => $value) {
-                    info("Replacing in $stubFile");
+        $this->info("\nCRUD for {$baseName} generated successfully!");
+        $this->warn("Run: php artisan migrate");
+        if ($fields) $this->line("Used custom fields: " . $this->option('fields'));
+    }
 
-                    $content = preg_replace('/{{\s*' . preg_quote($key, '/') . '\s*}}/', $value, $content);
-                }
-                File::ensureDirectoryExists(dirname($path));
-                File::put($path, $content);
-                $this->info("$stub created at $path.");
+    protected function parseFields($fieldsOption)
+    {
+        if (! $fieldsOption) return [];
+
+        $fields = [];
+        foreach (explode(',', $fieldsOption) as $part) {
+            $part = trim($part);
+            $segments = explode(':', $part);
+            $name = $segments[0];
+            $type = $segments[1] ?? 'string';
+            $modifiers = $segments[2] ?? '';
+
+            $fields[] = [
+                'name'       => $name,
+                'camel'      => Str::camel($name),
+                'title'      => Str::title(str_replace('_', ' ', $name)),
+                'type'       => $type,
+                'input_type' => $this->getInputType($type),
+                'rules'      => $this->getValidationRules($type, $modifiers, $name === 'email'),
+                'nullable'   => str_contains($modifiers, 'nullable'),
+                'unique'     => str_contains($modifiers, 'unique'),
+            ];
+        }
+        return $fields;
+    }
+
+    protected function getInputType($type)
+    {
+        return match (strtolower($type)) {
+            'text'              => 'textarea',
+            'boolean'           => 'checkbox',
+            'date', 'datetime'  => 'date',
+            'email'             => 'email',
+            'file'              => 'file',
+            'integer', 'biginteger' => 'number',
+            default             => 'text',
+        };
+    }
+
+    protected function getValidationRules($type, $modifiers, $isEmailField)
+    {
+        $rules = [];
+
+        if (! str_contains($modifiers, 'nullable')) $rules[] = 'required';
+
+        if ($isEmailField || strtolower($type) === 'email') $rules[] = 'email';
+        if (in_array(strtolower($type), ['integer', 'biginteger'])) $rules[] = 'integer';
+        if (strtolower($type) === 'boolean') $rules[] = 'boolean';
+
+        $rules[] = match (strtolower($type)) {
+            'string' => 'string',
+            'text'   => 'string',
+            default  => 'string',
+        };
+
+        if (str_contains($modifiers, 'unique')) $rules[] = 'unique:{{table}},' . $type;
+
+        return implode('|', $rules);
+    }
+
+    protected function generateFromStub($stub, $path, $replacements, $extra = null)
+    {
+        $stubFile = "$stub/$stub.stub";
+        if (! File::exists($stubFile)) {
+            $this->error("Stub missing: $stubFile");
+            return;
+        }
+
+        $content = File::get($stubFile);
+
+        // Fields loop
+        if ($extra && isset($extra['loop'])) {
+            $loop = '';
+            foreach ($extra['fields'] as $field) {
+                $loop .= str_replace(
+                    ['{{field.name}}', '{{field.camel}}', '{{field.title}}', '{{field.input_type}}', '{{field.rules}}'],
+                    [$field['name'], $field['camel'], $field['title'], $field['input_type'], $field['rules']],
+                    $extra['loop']
+                ) . "\n";
+            }
+            $content = str_replace('{{fields_loop}}', $loop, $content);
+        }
+
+        $content = str_replace(array_keys($replacements), array_values($replacements), $content);
+
+        File::ensureDirectoryExists(dirname($path));
+        File::put($path, $content);
+        $this->info(basename($path) . ' created');
+    }
+
+    // Individual generators
+    protected function generateModel($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Models/{$namespacePath}{$baseName}.php");
+        $this->generateFromStub("{$stubPath}/model", $path, $replacements);
+    }
+
+    protected function generateMigration($stubPath, $replacements, $table, $fields)
+    {
+        $path = database_path('migrations/' . date('Y_m_d_His') . "_create_{$table}_table.php");
+
+        $columnsLoop = '';
+        foreach ($fields as $field) {
+            $nullable = $field['nullable'] ? '->nullable()' : '';
+            $unique = $field['unique'] ? '->unique()' : '';
+            $columnsLoop .= "            \$table->{$field['type']}('{$field['name']}'){$nullable}{$unique};\n";
+        }
+
+        $extra = ['fields' => $fields, 'loop' => $columnsLoop];
+        $this->generateFromStub("{$stubPath}/migration", $path, $replacements, $extra);
+    }
+
+    protected function generateRequest($stubPath, $replacements, $baseName, $namespacePath, $fields)
+    {
+        $path = app_path("Http/Requests/{$namespacePath}{$baseName}Request.php");
+
+        $storeRules = '';
+        $updateRules = '';
+        foreach ($fields as $field) {
+            $rule = $field['rules'];
+
+            // Store rules
+            $storeRules .= "            '{$field['name']}' => '{$rule}',\n";
+
+            // Update rules - sometimes + unique ignore current id
+            $updateRule = 'sometimes|' . str_replace('required', '', $rule);
+            if ($field['unique']) {
+                $updateRule = str_replace('unique:{{table}}', "unique:{{table}},{$field['name']},\$id", $updateRule);
+            }
+            $updateRules .= "            '{$field['name']}' => '{$updateRule}',\n";
+        }
+
+        $extra = [
+            'fields' => $fields,
+            'loop' => $storeRules,
+            'loop_update' => $updateRules, // hum stub mein alag placeholder nahi daale, direct replace kar denge
+        ];
+
+      
+        $content = File::get("{$stubPath}/request.stub");
+        $content = str_replace(array_keys($replacements), array_values($replacements), $content);
+        $content = str_replace('{{fields_loop}}', $storeRules, $content);
+        $content = str_replace('{{fields_loop_update}}', $updateRules, $content);
+
+        File::ensureDirectoryExists(dirname($path));
+        File::put($path, $content);
+        $this->info("{$baseName}Request created");
+    }
+
+    protected function generateRepository($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Repositories/{$namespacePath}{$baseName}Repository.php");
+        $this->generateFromStub("{$stubPath}/repository", $path, $replacements);
+    }
+
+    protected function generateInterface($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Repositories/Interfaces/{$namespacePath}{$baseName}RepositoryInterface.php");
+        $this->generateFromStub("{$stubPath}/interface", $path, $replacements);
+    }
+
+    protected function generatePolicy($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Policies/{$namespacePath}{$baseName}Policy.php");
+        $this->generateFromStub("{$stubPath}/policy", $path, $replacements);
+    }
+
+    protected function generateSeeder($stubPath, $replacements, $baseName)
+    {
+        $path = database_path("seeders/{$baseName}Seeder.php");
+        $this->generateFromStub("{$stubPath}/seeder", $path, $replacements);
+    }
+
+    protected function generateWebController($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Http/Controllers/{$namespacePath}{$baseName}Controller.php");
+        $this->generateFromStub("{$stubPath}/controller", $path, $replacements);
+    }
+
+    protected function generateApiController($stubPath, $replacements, $baseName, $namespacePath)
+    {
+        $path = app_path("Http/Controllers/Api/{$namespacePath}{$baseName}Controller.php");
+        $this->generateFromStub("{$stubPath}/api_controller", $path, $replacements);
+    }
+
+    protected function generateViews($stubPath, $replacements, $pluralLower, $namespacePath, $fields)
+    {
+        $viewsPath = resource_path("views/{$namespacePath}{$pluralLower}");
+
+        // index.blade.php - table columns
+        $tableLoop = '';
+        foreach ($fields as $field) {
+            $tableLoop .= "<th class=\"px-6 py-3\">{$field['title']}</th>\n";
+        }
+        foreach ($fields as $field) {
+            $tableLoop .= "<td class=\"px-6 py-4\">{{ \${$replacements['{{var}}']}->{$field['name']} }}</td>\n";
+        }
+
+        // create & edit - form fields
+        $formLoop = '';
+        foreach ($fields as $field) {
+            if ($field['input_type'] === 'textarea') {
+                $formLoop .= "<div class=\"mb-4\">\n    <label class=\"block text-gray-700\">{$field['title']}</label>\n    <textarea name=\"{$field['name']}\" class=\"mt-1 block w-full rounded-md border-gray-300\" required>{{ old('{$field['name']}', \${$replacements['{{var}}']}?->{$field['name']} ?? '') }}</textarea>\n</div>\n";
+            } elseif ($field['input_type'] === 'checkbox') {
+                $formLoop .= "<div class=\"mb-4\">\n    <label class=\"inline-flex items-center\">\n        <input type=\"checkbox\" name=\"{$field['name']}\" value=\"1\" {{ old('{$field['name']}', \${$replacements['{{var}}']}?->{$field['name']} ?? 0) ? 'checked' : '' }} class=\"rounded\">\n        <span class=\"ml-2 text-gray-700\">{$field['title']}</span>\n    </label>\n</div>\n";
             } else {
-                $this->error("Stub file for $stub not found at $stubFile.");
+                $formLoop .= "<div class=\"mb-4\">\n    <label class=\"block text-gray-700\">{$field['title']}</label>\n    <input type=\"{$field['input_type']}\" name=\"{$field['name']}\" value=\"{{ old('{$field['name']}', \${$replacements['{{var}}']}?->{$field['name']} ?? '') }}\" class=\"mt-1 block w-full rounded-md border-gray-300\" required>\n</div>\n";
             }
         }
 
-        // Generate routes
-        if ($generateWeb) {
-            $routeFile = base_path('routes/web.php');
-            $routeContent = <<<EOT
+        // Generate each view
+        $views = ['index', 'create', 'edit', 'show'];
+        foreach ($views as $view) {
+            $extra = null;
+            if ($view === 'index') $extra = ['fields' => $fields, 'loop' => $tableLoop];
+            if (in_array($view, ['create', 'edit'])) $extra = ['fields' => $fields, 'loop' => $formLoop];
 
-Route::middleware(['web', 'auth'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
-    Route::get('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
-    Route::get('/create', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'create'])->name('create');
-    Route::post('/', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
-    Route::get('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'edit'])->name('edit');
-    Route::put('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
-    Route::delete('/{id}', [App\\Http\\Controllers\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
-});
-EOT;
-            File::append($routeFile, $routeContent);
-            $this->info("Web routes appended to routes/web.php");
+            $path = "$viewsPath/{$view}.blade.php";
+            $this->generateFromStub("{$stubPath}/views/{$view}", $path, $replacements, $extra);
         }
+    }
 
-        if ($generateApi) {
-            $apiRouteFile = base_path('routes/api.php');
-            $apiRouteContent = <<<EOT
+    protected function outputWebRoutes($prefix, $namespace, $controller, $name)
+    {
+        $this->line("\n<info>Web routes (add to routes/web.php):</info>");
+        $fullController = $namespace ? "\\App\\Http\\Controllers\\{$namespace}{$controller}Controller" : "\\App\\Http\\Controllers\\{$controller}Controller";
+        $this->line("\nRoute::middleware(['auth'])->prefix('$prefix')->name('$name.')->group(function () {");
+        $this->line("    Route::resource('/', $fullController::class);");
+        $this->line("});");
+    }
 
-Route::middleware(['api'])->prefix('{$namespacePath}{$routeName}')->name('{$pluralCamel}.')->group(function () {
-    Route::get('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'index'])->name('index');
-    Route::post('/', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'store'])->name('store');
-    Route::get('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'show'])->name('show');
-    Route::put('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'update'])->name('update');
-    Route::delete('/{id}', [App\\Http\\Controllers\\Api\\{$namespacePath}{$baseName}Controller::class, 'destroy'])->name('destroy');
-});
-EOT;
-            File::append($apiRouteFile, $apiRouteContent);
-            $this->info("API routes appended to routes/api.php");
-        }
-
-        $this->info("CRUD for {$baseName} generated successfully!");
+    protected function outputApiRoutes($prefix, $namespace, $controller, $name)
+    {
+        $this->line("\n<info>API routes (add to routes/api.php):</info>");
+        $fullController = $namespace ? "\\App\\Http\\Controllers\\Api\\{$namespace}{$controller}Controller" : "\\App\\Http\\Controllers\\Api\\{$controller}Controller";
+        $this->line("\nRoute::prefix('$prefix')->name('$name.')->group(function () {");
+        $this->line("    Route::apiResource('/', $fullController::class);");
+        $this->line("});");
     }
 }

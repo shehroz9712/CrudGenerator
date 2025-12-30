@@ -2,33 +2,23 @@
 @section('css')
 @endsection
 @section('content')
-   <table class="w-full mt-4 bg-white shadow rounded">
+    <table class="w-full mt-4 bg-white shadow rounded">
             <thead>
-                <tr class="bg-gray-200">
-                    <th class="p-2">ID</th>
-                    <th class="p-2">Name</th>
-                    <th class="p-2">Status</th>
-                    <th class="p-2">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($data as $item)
-                    <tr>
-                        <td class="p-2">{{ $item->id }}</td>
-                        <td class="p-2">{{ $item->name }}</td>
-                        <td class="p-2">{{ $item->status ? 'Active' : 'Inactive' }}</td>
-                        <td class="p-2">
-                            <a href="{{ route('{{ pluralCamel }}.show', $item->id) }}" class="text-blue-500">View</a>
-                            <a href="{{ route('{{ pluralCamel }}.edit', $item->id) }}" class="text-green-500 ml-2">Edit</a>
-                            <form action="{{ route('{{ pluralCamel }}.destroy', $item->id) }}" method="POST" class="inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-500 ml-2">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
+        <tr>
+            <th>ID</th>
+                {{fields_loop}}  <!-- ye head ke liye alag loop bana sakta hai, lekin simple rakh -->
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(${{pluralVar}} as ${{var}})
+        <tr>
+            <td>{{ ${{var}}->id }}</td>
+            {{fields_loop}}  <!-- body ke liye {{ ${{var}}->{{field.name}} }} wala loop -->
+            <td>actions...</td>
+        </tr>
+        @endforeach
+    </tbody>
         </table>
 @endsection
 @section('js')
