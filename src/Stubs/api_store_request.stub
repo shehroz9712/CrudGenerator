@@ -1,0 +1,21 @@
+<?php
+
+namespace {{requestNamespace}};
+
+use {{modelClass}};
+use Illuminate\Foundation\Http\FormRequest;
+
+class {{requestClass}} extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('create', {{model}}::class) ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+{{storeRules}}
+        ];
+    }
+}

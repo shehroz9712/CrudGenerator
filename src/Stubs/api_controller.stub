@@ -1,58 +1,97 @@
 <?php
 
-namespace App\Http\Controllers\Api\v1\Admin;
+namespace {{apiControllerNamespace}};
 
-use App\Http\Controllers\Api\v1\BaseController;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Repositories\Interfaces\{{ namespace }}{{ baseName }}RepositoryInterface;
-use App\Http\Requests\{{ namespace }}{{ baseName }}Request;
-use App\Http\Requests\OpenApiRequests\{{ namespace }}{{ baseName }}FilterRequest;
+use {{modelClass}};
+use {{requestNamespace}}\{{model}}ApiFilterRequest;
+use {{requestNamespace}}\{{model}}ApiStoreRequest;
+use {{requestNamespace}}\{{model}}ApiUpdateRequest;
+use {{resourceNamespace}}\{{model}}Resource;
+use {{interfaceNamespace}}\{{model}}RepositoryInterface;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 
-class {{ baseName }}Controller extends BaseController
+class {{model}}Controller extends Controller
 {
-    use AuthorizesRequests;
+    public function __construct(
+        protected readonly {{model}}RepositoryInterface ${{var}}Repository
+    ) {}
 
-    protected ${{ camelName }}Repository;
-
-    public function __construct({{ namespace }}{{ baseName }}RepositoryInterface ${{ camelName }}Repository)
+    public function index({{model}}ApiFilterRequest $request): JsonResponse
     {
-        $this->{{ camelName }}Repository = ${{ camelName }}Repository;
+        $this->authorize('viewAny', {{model}}::class);
+
+        $data = $this->{{var}}Repository->getAll($request->validated());
+
+        return $this->respondSuccess(
+            {{model}}Resource::collection($data),
+            'Data fetched successfully',
+            $this->paginationMeta($data)
+        );
     }
 
-    public function index({{ baseName }}Request $request)
+    public function store({{model}}ApiStoreRequest $request): JsonResponse
     {
-        $data = $this->{{ camelName }}Repository->getAll($request->validatedParams());
-        return $this->respondSuccess($data, "{{ baseName }} Active records retrieved successfully.");
+        $record = $this->{{var}}Repository->create($request->validated());
+
+        return $this->respondSuccess(
+            new {{model}}Resource($record),
+            '{{model}} created successfully',
+            [],
+            201
+        );
     }
 
- 
-    public function getAll({{ baseName }}Request $request)
+    public function show({{model}} ${{var}}): JsonResponse
     {
-        $data = $this->{{ camelName }}Repository->getActiveAll($request->validatedParams());
-        return $this->respondSuccess($data, "{{ baseName }} All records retrieved successfully.");
+        $this->authorize('view', ${{var}});
+
+        return $this->respondSuccess(
+            new {{model}}Resource(${{var}}),
+            'Data fetched successfully'
+        );
     }
 
-    public function store({{ baseName }}Request $request)
+    public function update({{model}}ApiUpdateRequest $request, {{model}} ${{var}}): JsonResponse
     {
-        $data = $this->{{ camelName }}Repository->create($request->validatedParams());
-        return $this->respondObjectCreated($data->toArray(), true, "{{ baseName }} created successfully.");
+        $record = $this->{{var}}Repository->update(${{var}}->id, $request->validated());
+
+        return $this->respondSuccess(
+            new {{model}}Resource($record),
+            '{{model}} updated successfully'
+        );
     }
 
-    public function update({{ baseName }}Request $request)
+    public function destroy({{model}} ${{var}}): JsonResponse
     {
-        $data = $this->{{ camelName }}Repository->update($request->id, $request->validatedParams());
-        return $this->respondSuccess($data, "{{ baseName }} updated successfully.");
+        $this->authorize('delete', ${{var}});
+
+        $this->{{var}}Repository->delete(${{var}}->id);
+
+        return $this->respondSuccess([], '{{model}} deleted successfully');
     }
 
-    public function show({{ baseName }}Request $request)
+    protected function respondSuccess(mixed $data = [], string $message = 'Success', array $meta = [], int $status = 200): JsonResponse
     {
-        $data = $this->{{ camelName }}Repository->findById($request->id);
-        return $this->respondSuccess($data, "{{ baseName }} details retrieved.");
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+            'meta' => $meta,
+        ], $status);
     }
 
-    public function destroy({{ baseName }}Request $request)
+    protected function paginationMeta(mixed $data): array
     {
-        $this->{{ camelName }}Repository->delete($request->id);
-        return $this->respondSuccess([], "{{ baseName }} deleted successfully.");
+        if (! method_exists($data, 'currentPage')) {
+            return [];
+        }
+
+        return [
+            'current_page' => $data->currentPage(),
+            'last_page' => $data->lastPage(),
+            'per_page' => $data->perPage(),
+            'total' => $data->total(),
+        ];
     }
 }

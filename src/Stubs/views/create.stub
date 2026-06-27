@@ -1,14 +1,16 @@
-@extends('layouts.app')
-@section('meta')
-@endsection
-@section('css')
-@endsection
+@extends('{{adminLayout}}')
+
 @section('content')
-<form action="..." method="POST">
-    @csrf
-    @method('POST') <!-- edit mein PUT -->
-{{fields_loop}}  <!-- har field ka input div -->
-</form>
-@endsection
-@section('js')
+<div class="p-6 max-w-3xl">
+    <h1 class="text-2xl font-semibold mb-6">Create {{model}}</h1>
+
+    <form action="{{ route('{{adminRouteName}}.store') }}" method="POST" class="bg-white p-6 rounded shadow">
+        @csrf
+        {{formFields}}
+        <div class="flex gap-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+            <a href="{{ route('{{adminRouteName}}.index') }}" class="px-4 py-2 bg-gray-200 rounded">Cancel</a>
+        </div>
+    </form>
+</div>
 @endsection

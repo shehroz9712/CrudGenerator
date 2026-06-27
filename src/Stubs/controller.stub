@@ -1,57 +1,85 @@
 <?php
 
-declare(strict_types=1);
+namespace {{controllerNamespace}};
 
-namespace App\Http\Controllers\{{ namespace }};
-
-use App\Models\{{ baseName }};
-use App\Http\Requests\{{ namespace }}{{ baseName }}Request;
-use App\Repositories\Interfaces\{{ namespace }}{{ baseName }}RepositoryInterface;
+use {{modelClass}};
+use {{requestNamespace}}\{{model}}StoreRequest;
+use {{requestNamespace}}\{{model}}UpdateRequest;
+use {{interfaceNamespace}}\{{model}}RepositoryInterface;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class {{ baseName }}Controller extends Controller
+class {{model}}Controller extends Controller
 {
     public function __construct(
-        protected readonly {{ namespace }}{{ baseName }}RepositoryInterface ${{ camelName }}Repository
+        protected readonly {{model}}RepositoryInterface ${{var}}Repository
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $data = $this->{{ camelName }}Repository->getAll(request()->all());
-        return view('{{ namespacePath }}{{ pluralSnake }}.index', compact('data'));
+        $this->authorize('viewAny', {{model}}::class);
+
+        ${{pluralVar}} = $this->{{var}}Repository->getAll([
+            'search' => $request->get('search'),
+            'where' => array_filter($request->only(array_merge(['status'], {{model}}::allowedColumns()))),
+            'order_by' => $request->get('sort', 'id'),
+            'direction' => $request->get('direction', 'desc'),
+            'limit' => (int) $request->get('per_page', 15),
+            'paginate' => true,
+        ]);
+
+        return view('{{viewPath}}.index', compact('{{pluralVar}}'));
     }
 
     public function create(): View
     {
-        return view('{{ namespacePath }}{{ pluralSnake }}.create');
+        $this->authorize('create', {{model}}::class);
+
+        return view('{{viewPath}}.create');
     }
 
-    public function store({{ baseName }}Request $request): RedirectResponse
+    public function store({{model}}StoreRequest $request): RedirectResponse
     {
-        $this->{{ camelName }}Repository->create($request->validated());
-        return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} created successfully.');
+        $this->{{var}}Repository->create($request->validated());
+
+        return redirect()
+            ->route('{{adminRouteName}}.index')
+            ->with('success', '{{model}} created successfully.');
     }
 
-    public function show({{ baseName }} ${{ camelName }}): View
+    public function show({{model}} ${{var}}): View
     {
-        return view('{{ namespacePath }}{{ pluralSnake }}.show', compact('{{ camelName }}'));
+        $this->authorize('view', ${{var}});
+
+        return view('{{viewPath}}.show', compact('{{var}}'));
     }
 
-    public function edit({{ baseName }} ${{ camelName }}): View
+    public function edit({{model}} ${{var}}): View
     {
-        return view('{{ namespacePath }}{{ pluralSnake }}.edit', compact('{{ camelName }}'));
+        $this->authorize('update', ${{var}});
+
+        return view('{{viewPath}}.edit', compact('{{var}}'));
     }
 
-    public function update({{ baseName }}Request $request, {{ baseName }} ${{ camelName }}): RedirectResponse
+    public function update({{model}}UpdateRequest $request, {{model}} ${{var}}): RedirectResponse
     {
-        $this->{{ camelName }}Repository->update(${{ camelName }}->id, $request->validated());
-        return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} updated successfully.');
+        $this->{{var}}Repository->update(${{var}}->id, $request->validated());
+
+        return redirect()
+            ->route('{{adminRouteName}}.index')
+            ->with('success', '{{model}} updated successfully.');
     }
 
-    public function destroy({{ baseName }} ${{ camelName }}): RedirectResponse
+    public function destroy({{model}} ${{var}}): RedirectResponse
     {
-        $this->{{ camelName }}Repository->delete(${{ camelName }}->id);
-        return to_route('{{ pluralCamel }}.index')->with('success', '{{ baseName }} deleted successfully.');
+        $this->authorize('delete', ${{var}});
+
+        $this->{{var}}Repository->delete(${{var}}->id);
+
+        return redirect()
+            ->route('{{adminRouteName}}.index')
+            ->with('success', '{{model}} deleted successfully.');
     }
 }

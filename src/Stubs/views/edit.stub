@@ -1,9 +1,17 @@
-@extends('layouts.app')
-@section('meta')
-@endsection
-@section('css')
-@endsection
+@extends('{{adminLayout}}')
+
 @section('content')
-@endsection
-@section('js')
+<div class="p-6 max-w-3xl">
+    <h1 class="text-2xl font-semibold mb-6">Edit {{model}}</h1>
+
+    <form action="{{ route('{{adminRouteName}}.update', ${{var}}) }}" method="POST" class="bg-white p-6 rounded shadow">
+        @csrf
+        @method('PUT')
+        {{formFields}}
+        <div class="flex gap-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update</button>
+            <a href="{{ route('{{adminRouteName}}.index') }}" class="px-4 py-2 bg-gray-200 rounded">Cancel</a>
+        </div>
+    </form>
+</div>
 @endsection

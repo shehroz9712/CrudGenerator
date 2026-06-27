@@ -1,39 +1,39 @@
 <?php
 
-namespace App\Policies;
+namespace {{policyNamespace}};
 
 use App\Models\User;
-use App\Models\{{ name }};
+use {{modelClass}};
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class {{ name }}Policy
+class {{model}}Policy
 {
     use HandlesAuthorization;
 
-    protected string $permission = '{{ kebabName }}';
+    protected string $module = '{{permissionModule}}';
 
     public function viewAny(User $user): bool
     {
-        return $user->can("view-{$this->permission}");
+        return $user->can("{$this->module}.view");
     }
 
-    public function view(User $user, {{ name }} ${{ varName }}): bool
+    public function view(User $user, {{model}} ${{var}}): bool
     {
-        return $user->can("view-{$this->permission}");
+        return $user->can("{$this->module}.view");
     }
 
     public function create(User $user): bool
     {
-        return $user->can("create-{$this->permission}");
+        return $user->can("{$this->module}.create");
     }
 
-    public function update(User $user, {{ name }} ${{ varName }}): bool
+    public function update(User $user, {{model}} ${{var}}): bool
     {
-        return $user->can("edit-{$this->permission}");
+        return $user->can("{$this->module}.edit");
     }
 
-    public function delete(User $user, {{ name }} ${{ varName }}): bool
+    public function delete(User $user, {{model}} ${{var}}): bool
     {
-        return $user->can("delete-{$this->permission}");
+        return $user->can("{$this->module}.delete");
     }
 }

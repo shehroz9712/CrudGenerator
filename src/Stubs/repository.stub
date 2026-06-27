@@ -1,41 +1,48 @@
 <?php
 
-namespace App\Repositories;
+namespace {{repositoryNamespace}};
 
-use App\Models\{{ name }};
-use App\Repositories\Interfaces\{{ name }}RepositoryInterface;
+use {{modelClass}};
+use {{interfaceNamespace}}\{{model}}RepositoryInterface;
 
-class {{ name }}Repository implements {{ name }}RepositoryInterface
+class {{model}}Repository implements {{model}}RepositoryInterface
 {
     public function getAll(array $params): mixed
     {
-        return {{ name }}::filterAndFetch($params);
+        return {{model}}::query()->filterAndFetch($params);
     }
 
     public function getActiveAll(array $params): mixed
     {
-        return {{ name }}::filterAndFetch($params)->active();
+        $query = {{model}}::query();
+
+        // @if(hasStatus)
+        $query->active();
+        // @endif
+
+        return $query->filterAndFetch($params);
     }
 
     public function findById(int $id): mixed
     {
-        return {{ name }}::findOrFail($id);
+        return {{model}}::findOrFail($id);
     }
 
     public function create(array $data): mixed
     {
-        return {{ name }}::create($data);
+        return {{model}}::create($data);
     }
 
     public function update(int $id, array $data): mixed
     {
-        $record = {{ name }}::findOrFail($id);
+        $record = {{model}}::findOrFail($id);
         $record->update($data);
-        return $record;
+
+        return $record->fresh();
     }
 
     public function delete(int $id): bool
     {
-        return {{ name }}::findOrFail($id)->delete();
+        return (bool) {{model}}::findOrFail($id)->delete();
     }
 }

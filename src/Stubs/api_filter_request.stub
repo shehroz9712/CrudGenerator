@@ -1,0 +1,41 @@
+<?php
+
+namespace {{requestNamespace}};
+
+use {{modelClass}};
+use Illuminate\Foundation\Http\FormRequest;
+
+class {{requestClass}} extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('viewAny', {{model}}::class) ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'search' => ['nullable', 'string', 'max:255'],
+            'where' => ['nullable', 'array'],
+            'where.*' => ['nullable'],
+            'order_by' => ['nullable', 'string', 'in:' . implode(',', {{model}}::allowedColumns())],
+            'direction' => ['nullable', 'in:asc,desc'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'paginate' => ['nullable', 'boolean'],
+        ];
+    }
+
+    public function validated($key = null, $default = null): array
+    {
+        $validated = parent::validated($key, $default);
+
+        return [
+            'search' => $validated['search'] ?? null,
+            'where' => $validated['where'] ?? [],
+            'order_by' => $validated['order_by'] ?? 'id',
+            'direction' => $validated['direction'] ?? 'desc',
+            'limit' => (int) ($validated['limit'] ?? 15),
+            'paginate' => $validated['paginate'] ?? true,
+        ];
+    }
+}

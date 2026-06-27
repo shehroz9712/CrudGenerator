@@ -1,0 +1,16 @@
+<?php
+
+namespace Database\Seeders;
+
+use {{modelClass}};
+use Illuminate\Database\Seeder;
+
+class {{model}}Seeder extends Seeder
+{
+    public function run(): void
+    {
+        {{model}}::query()->create([
+            // Add sample data here
+        ]);
+    }
+}

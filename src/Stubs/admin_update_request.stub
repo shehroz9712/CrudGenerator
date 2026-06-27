@@ -1,0 +1,23 @@
+<?php
+
+namespace {{requestNamespace}};
+
+use {{modelClass}};
+use Illuminate\Foundation\Http\FormRequest;
+
+class {{requestClass}} extends FormRequest
+{
+    public function authorize(): bool
+    {
+        ${{var}} = $this->route('{{kebabName}}');
+
+        return $this->user()?->can('update', ${{var}} instanceof {{model}} ? ${{var}} : {{model}}::find(${{var}})) ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+{{updateRules}}
+        ];
+    }
+}

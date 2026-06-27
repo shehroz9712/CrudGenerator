@@ -1,43 +1,65 @@
 <?php
 
-namespace App\Models;
+namespace {{modelNamespace}};
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+// @if(softDeletes)
 use Illuminate\Database\Eloquent\SoftDeletes;
+// @endif
 
-class {{ name }} extends Model
+class {{model}} extends Model
 {
     use HasFactory;
-    if($softDeletes)
+    // @if(softDeletes)
     use SoftDeletes;
-    endif
+    // @endif
 
     protected $fillable = [
-        'name',
-        'status',
+{{fillable}}
     ];
 
+    // @if(hasCasts)
     protected $casts = [
-        'status' => 'boolean',
+{{casts}}
     ];
+    // @endif
 
+    // @if(hasStatus)
     protected $attributes = [
         'status' => true,
     ];
+    // @endif
 
-    // Example scope to filter and fetch with optional logic
-    public function scopeFilterAndFetch($query, array $params)
+    public static function allowedColumns(): array
     {
-        return $query
-            ->when($params['search'] ?? null, fn($q, $search) => 
-                $q->where('name', 'like', "%$search%")
-            )
-            ->orderByDesc('id');
+        return [{{allowedColumns}}];
     }
 
+    public function scopeFilterAndFetch($query, array $params)
+    {
+        $query = $query
+{{searchScope}}
+            ->when($params['where'] ?? null, function ($q, $where) {
+                foreach ($where as $column => $value) {
+                    if ($value !== null && $value !== '') {
+                        $q->where($column, $value);
+                    }
+                }
+            })
+            ->when($params['order_by'] ?? null, fn ($q, $column) => $q->orderBy($column, $params['direction'] ?? 'desc'), fn ($q) => $q->orderByDesc('id'));
+
+        if (($params['paginate'] ?? true) === true || ($params['paginate'] ?? true) === '1') {
+            return $query->paginate((int) ($params['limit'] ?? 15));
+        }
+
+        return $query->get();
+    }
+
+    // @if(hasStatus)
     public function scopeActive($query)
     {
         return $query->where('status', true);
     }
+    // @endif
 }

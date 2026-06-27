@@ -1,25 +1,73 @@
-@extends('layouts.app')
-@section('css')
-@endsection
+@extends('{{adminLayout}}')
+
 @section('content')
-    <table class="w-full mt-4 bg-white shadow rounded">
-            <thead>
-        <tr>
-            <th>ID</th>
-                {{fields_loop}}  <!-- ye head ke liye alag loop bana sakta hai, lekin simple rakh -->
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach(${{pluralVar}} as ${{var}})
-        <tr>
-            <td>{{ ${{var}}->id }}</td>
-            {{fields_loop}}  <!-- body ke liye {{ ${{var}}->{{field.name}} }} wala loop -->
-            <td>actions...</td>
-        </tr>
-        @endforeach
-    </tbody>
+<div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">{{menuLabel}}</h1>
+        @can('create', {{modelClass}}::class)
+            <a href="{{ route('{{adminRouteName}}.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Create {{model}}
+            </a>
+        @endcan
+    </div>
+
+    @if(session('success'))
+        <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ session('success') }}</div>
+    @endif
+
+    <form method="GET" class="mb-4 flex gap-2">
+        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..." class="rounded border-gray-300">
+        // @if(hasStatus)
+        <select name="status" class="rounded border-gray-300">
+            <option value="">All Status</option>
+            <option value="1" @selected(request('status') === '1')>Active</option>
+            <option value="0" @selected(request('status') === '0')>Inactive</option>
+        </select>
+        // @endif
+        <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded">Filter</button>
+    </form>
+
+    <div class="overflow-x-auto bg-white rounded shadow">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase">ID</th>
+                    {{tableHeaders}}
+                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                @forelse(${{pluralVar}} as ${{var}})
+                    <tr>
+                        <td class="px-4 py-2">{{ ${{var}}->id }}</td>
+                        {{tableCells}}
+                        <td class="px-4 py-2 space-x-2">
+                            @can('view', ${{var}})
+                                <a href="{{ route('{{adminRouteName}}.show', ${{var}}) }}" class="text-blue-600">View</a>
+                            @endcan
+                            @can('update', ${{var}})
+                                <a href="{{ route('{{adminRouteName}}.edit', ${{var}}) }}" class="text-indigo-600">Edit</a>
+                            @endcan
+                            @can('delete', ${{var}})
+                                <form action="{{ route('{{adminRouteName}}.destroy', ${{var}}) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600" onclick="return confirm('Delete this record?')">Delete</button>
+                                </form>
+                            @endcan
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="100" class="px-4 py-6 text-center text-gray-500">No records found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
         </table>
-@endsection
-@section('js')
+    </div>
+
+    <div class="mt-4">
+        {{ ${{pluralVar}}->withQueryString()->links() }}
+    </div>
+</div>
 @endsection
