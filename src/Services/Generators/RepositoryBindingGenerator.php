@@ -5,7 +5,7 @@ namespace Shehroz\CrudGenerator\Services\Generators;
 use Illuminate\Support\Facades\File;
 use Shehroz\CrudGenerator\DTO\CrudDefinition;
 
-class RepositoryBindingGenerator extends BaseGenerator
+class RepositoryBindingGenerator
 {
     public function generate(CrudDefinition $definition): string
     {

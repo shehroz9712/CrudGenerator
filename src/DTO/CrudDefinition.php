@@ -90,6 +90,10 @@ class CrudDefinition
         if ($this->namespacePath) {
             $ns = str_replace('/', '.', rtrim($this->namespacePath, '/'));
 
+            if (strtolower($ns) === strtolower($prefix)) {
+                return "{$prefix}.{$this->pluralVar}";
+            }
+
             return "{$prefix}.{$ns}.{$this->pluralVar}";
         }
 
@@ -101,7 +105,13 @@ class CrudDefinition
         $prefix = rtrim(config('crud-generator.api.route_name_prefix', 'api.'), '.');
 
         if ($this->namespacePath) {
-            $ns = str_replace('/', '.', rtrim($this->namespacePath, '/'));
+            $ns = collect(explode('/', rtrim($this->namespacePath, '/')))
+                ->map(fn ($part) => str($part)->kebab()->toString())
+                ->implode('.');
+
+            if (strtolower($ns) === strtolower($prefix)) {
+                return "{$prefix}.{$this->pluralVar}";
+            }
 
             return "{$prefix}.{$ns}.{$this->pluralVar}";
         }
@@ -138,7 +148,7 @@ class CrudDefinition
     public function toReplacements(): array
     {
         $adminRoutePrefix = config('crud-generator.admin.route_prefix', 'admin');
-        $apiPrefix = config('crud-generator.api.prefix', 'api/v1');
+        $apiPrefix = config('crud-generator.api.prefix', 'v1');
 
         return [
             '{{model}}' => $this->baseName,

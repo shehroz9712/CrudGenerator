@@ -31,7 +31,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'api' => [
-        'prefix' => 'api/v1',
+        'prefix' => 'v1',
         'route_name_prefix' => 'api.',
         'middleware' => ['api', 'auth:sanctum'],
         'controller_namespace' => 'App\\Http\\Controllers\\Api',

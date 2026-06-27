@@ -68,9 +68,14 @@ class CrudGeneratorService
             }
         }
 
-        $seederMessage = $this->seederGenerator->generate($definition);
-        if ($seederMessage) {
-            $messages[] = $seederMessage;
+        $this->seederGenerator->generate($definition);
+        if ($definition->generateSeeder) {
+            $output->info("Seeder {$definition->baseName}Seeder created.");
+        }
+
+        $permissionMessage = $this->seederGenerator->permissionMessage($definition);
+        if ($permissionMessage) {
+            $messages[] = $permissionMessage;
         }
 
         if ($definition->generateAdmin) {

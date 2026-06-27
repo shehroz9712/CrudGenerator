@@ -7,23 +7,22 @@ use Shehroz\CrudGenerator\DTO\CrudDefinition;
 
 class SeederGenerator extends BaseGenerator
 {
-    public function generate(CrudDefinition $definition): ?string
+    public function generate(CrudDefinition $definition): void
     {
-        if (! $definition->generateSeeder) {
+        if ($definition->generateSeeder) {
+            $path = database_path("seeders/{$definition->baseName}Seeder.php");
+            $content = $this->renderer->render('seeder', $this->replacements($definition));
+            $this->renderer->write($path, $content);
+        }
+    }
+
+    public function permissionMessage(CrudDefinition $definition): ?string
+    {
+        if (! $definition->generatePolicy) {
             return null;
         }
 
-        $path = database_path("seeders/{$definition->baseName}Seeder.php");
-        $content = $this->renderer->render('seeder', $this->replacements($definition));
-        $this->renderer->write($path, $content);
-
-        $permissionMessage = null;
-
-        if ($definition->generatePolicy) {
-            $permissionMessage = $this->appendPermissions($definition);
-        }
-
-        return $permissionMessage;
+        return $this->appendPermissions($definition);
     }
 
     protected function appendPermissions(CrudDefinition $definition): string

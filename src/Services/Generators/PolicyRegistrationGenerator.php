@@ -5,7 +5,7 @@ namespace Shehroz\CrudGenerator\Services\Generators;
 use Illuminate\Support\Facades\File;
 use Shehroz\CrudGenerator\DTO\CrudDefinition;
 
-class PolicyRegistrationGenerator extends BaseGenerator
+class PolicyRegistrationGenerator
 {
     public function generate(CrudDefinition $definition): ?string
     {

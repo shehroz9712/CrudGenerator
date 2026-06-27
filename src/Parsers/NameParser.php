@@ -10,9 +10,11 @@ class NameParser
     {
         $nameParts = explode('/', $name);
         $baseName = Str::studly(array_pop($nameParts));
-        $namespacePath = count($nameParts) > 0 ? implode('/', $nameParts) . '/' : '';
+        $namespacePath = count($nameParts) > 0
+            ? implode('/', array_map(fn ($part) => Str::studly($part), $nameParts)) . '/'
+            : '';
         $namespace = count($nameParts) > 0
-            ? implode('\\', array_map(fn ($part) => Str::studly($part), $nameParts)) . '\\'
+            ? implode('\\', array_map(fn ($part) => Str::studly($part), $nameParts))
             : '';
 
         $singularSnake = Str::snake($baseName);

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Shehroz\CrudGenerator\DTO\CrudDefinition;
 
-class RouteGenerator extends BaseGenerator
+class RouteGenerator
 {
     public function generate(CrudDefinition $definition): array
     {
@@ -25,22 +25,15 @@ class RouteGenerator extends BaseGenerator
 
     protected function buildAdminRoutes(CrudDefinition $definition): string
     {
-        $controller = "\\{$definition->controllerNamespace()}\\{$definition->baseName}Controller";
+        $controller = $definition->controllerNamespace() . '\\' . $definition->baseName . 'Controller';
         $middleware = implode("', '", config('crud-generator.admin.middleware', ['web', 'auth']));
         $prefix = config('crud-generator.admin.route_prefix', 'admin');
-        $routeName = $definition->adminRouteName();
-        $resource = Str::kebab($definition->pluralVar);
-
-        if ($definition->namespacePath) {
-            $ns = rtrim($definition->namespacePath, '/');
-            $resourcePath = Str::kebab($ns) . '/' . $resource;
-        } else {
-            $resourcePath = $resource;
-        }
+        $namePrefix = rtrim(config('crud-generator.admin.route_name_prefix', 'admin.'), '.') . '.';
+        $resourcePath = $this->resourcePath($definition, $prefix);
 
         $snippet = <<<PHP
 
-Route::middleware(['{$middleware}'])->prefix('{$prefix}')->name('{$routeName}.')->group(function () {
+Route::middleware(['{$middleware}'])->prefix('{$prefix}')->name('{$namePrefix}')->group(function () {
     Route::resource('{$resourcePath}', {$controller}::class);
 });
 
@@ -51,28 +44,44 @@ PHP;
 
     protected function buildApiRoutes(CrudDefinition $definition): string
     {
-        $controller = "\\{$definition->apiControllerNamespace()}\\{$definition->baseName}Controller";
+        $controller = $definition->apiControllerNamespace() . '\\' . $definition->baseName . 'Controller';
         $middleware = implode("', '", config('crud-generator.api.middleware', ['api', 'auth:sanctum']));
-        $prefix = config('crud-generator.api.prefix', 'api/v1');
-        $routeName = $definition->apiRouteName();
-        $resource = Str::kebab($definition->pluralVar);
-
-        if ($definition->namespacePath) {
-            $ns = rtrim($definition->namespacePath, '/');
-            $resourcePath = Str::kebab($ns) . '/' . $resource;
-        } else {
-            $resourcePath = $resource;
-        }
+        $prefix = config('crud-generator.api.prefix', 'v1');
+        $namePrefix = rtrim(config('crud-generator.api.route_name_prefix', 'api.'), '.') . '.';
+        $resourcePath = $this->resourcePath($definition, config('crud-generator.admin.route_prefix', 'admin'));
 
         $snippet = <<<PHP
 
-Route::middleware(['{$middleware}'])->prefix('{$prefix}')->name('{$routeName}.')->group(function () {
+Route::middleware(['{$middleware}'])->prefix('{$prefix}')->name('{$namePrefix}')->group(function () {
     Route::apiResource('{$resourcePath}', {$controller}::class);
 });
 
 PHP;
 
         return $this->appendOrPrint($snippet, 'api', $definition);
+    }
+
+    protected function resourcePath(CrudDefinition $definition, string $skipPrefix = ''): string
+    {
+        $resource = Str::kebab($definition->pluralVar);
+
+        if (! $definition->namespacePath) {
+            return $resource;
+        }
+
+        $parts = collect(explode('/', rtrim($definition->namespacePath, '/')))
+            ->map(fn ($part) => Str::kebab($part))
+            ->values();
+
+        if ($skipPrefix && $parts->first() === Str::kebab($skipPrefix)) {
+            $parts = $parts->slice(1);
+        }
+
+        if ($parts->isEmpty()) {
+            return $resource;
+        }
+
+        return $parts->implode('/') . '/' . $resource;
     }
 
     protected function appendOrPrint(string $snippet, string $type, CrudDefinition $definition): string

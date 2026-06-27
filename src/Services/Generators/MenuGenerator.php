@@ -5,7 +5,7 @@ namespace Shehroz\CrudGenerator\Services\Generators;
 use Illuminate\Support\Facades\File;
 use Shehroz\CrudGenerator\DTO\CrudDefinition;
 
-class MenuGenerator extends BaseGenerator
+class MenuGenerator
 {
     public function generate(CrudDefinition $definition): ?string
     {

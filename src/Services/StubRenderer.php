@@ -84,7 +84,7 @@ class StubRenderer
 
     protected function applyConditional(string $content, string $key, bool $enabled): string
     {
-        $pattern = '/\/\/\s*@if\(' . preg_quote($key, '/') . '\)(.*?)@endif/s';
+        $pattern = '/\/\/\s*@if\(' . preg_quote($key, '/') . '\)\s*(.*?)\/\/\s*@endif/s';
 
         if ($enabled) {
             return preg_replace_callback($pattern, function ($matches) {
